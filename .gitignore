@@ -1,0 +1,11 @@
+# Ignore environment variables file
+.env
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+found_keys_20250705_213237.log
+found_keys.log
+projectmain.md
+tasks/task.md
+memory/memory.md

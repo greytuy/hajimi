@@ -1,0 +1,54 @@
+name: Gemini Key Scanner
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天 03:30 UTC 运行一次，可按需调整
+    - cron: "30 3 * * *"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    env:
+      # 用户需在仓库 Settings → Secrets 添加 PERSONAL_GITHUB_TOKEN 以提升速率限制
+      GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+      # 如需验证 Gemini Key，可配置代理；仅示例
+      # https_proxy: "http://127.0.0.1:10809"
+      # http_proxy: "http://127.0.0.1:10809"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Gemini scanner
+        run: |
+          python gemini_scanner.py
+
+      - name: Upload logs & checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-scan-results-${{ github.run_id }}
+          path: |
+            *.log
+            *.txt
+            checkpoint.json
+          if-no-files-found: ignore 
