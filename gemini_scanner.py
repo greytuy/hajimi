@@ -44,7 +44,8 @@ if _tok_env:
     GITHUB_TOKENS = [t.strip() for t in _tok_env.split(",") if t.strip()]
 else:
     single = os.environ.get("GITHUB_TOKEN")
-    GITHUB_TOKENS = [single] if single else []
+    # 若从 CI/Secrets 注入的 token 带有换行或空格，先进行 strip()
+    GITHUB_TOKENS = [single.strip()] if single and single.strip() else []
 
 # 轮询索引
 _token_ptr = 0
@@ -56,7 +57,8 @@ def _next_token():
         return None
     tok = GITHUB_TOKENS[_token_ptr % len(GITHUB_TOKENS)]
     _token_ptr += 1
-    return tok
+    # 再次 strip()，确保不存在隐藏空白字符
+    return tok.strip() if isinstance(tok, str) else tok
 
 # Maximum runtime for the script in minutes. 可通过环境变量覆盖。
 # Set to 0 or a negative number to run indefinitely.
@@ -106,7 +108,9 @@ def search_github_for_keys(query, token=None, max_retries=3):
         "Accept": "application/vnd.github.v3+json",
         "User-Agent": "GeminiScanner/1.0"
     }
+    # 统一去除 token 两端空白，避免出现非法 Header 错误
     if token:
+        token = token.strip()
         headers["Authorization"] = f"token {token}"
 
     params = {
