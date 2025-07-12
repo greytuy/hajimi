@@ -12,12 +12,11 @@ from google.api_core import exceptions as google_exceptions
 load_dotenv()
 
 # --- PROXY CONFIGURATION ---
-# If you need to use a proxy to access Google's APIs, set it here.
-# Replace "http://your_proxy_address:port" with your actual proxy server.
-# If you don't need a proxy, you can leave it as None.
-PROXY_URL = "http://127.0.0.1:10809"
+# 通过环境变量 PROXY_URL 控制；默认不使用代理
+PROXY_URL = os.environ.get("PROXY_URL", "").strip()
 
 if PROXY_URL:
+    print(f"Using proxy: {PROXY_URL}")
     os.environ["https_proxy"] = PROXY_URL
     os.environ["http_proxy"] = PROXY_URL
 # --- END PROXY CONFIGURATION ---
@@ -59,9 +58,12 @@ def _next_token():
     _token_ptr += 1
     return tok
 
-# Maximum runtime for the script in minutes.
+# Maximum runtime for the script in minutes. 可通过环境变量覆盖。
 # Set to 0 or a negative number to run indefinitely.
-MAX_RUNTIME_MINUTES = 60
+try:
+    MAX_RUNTIME_MINUTES = int(os.environ.get("MAX_RUNTIME_MINUTES", "60"))
+except ValueError:
+    MAX_RUNTIME_MINUTES = 60
 
 # ----------------- 增量扫描：检查点文件 -----------------
 # 扫描进度保存的文件名

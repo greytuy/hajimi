@@ -9,10 +9,13 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 120  # 防止长时间占用，必要时可调小
 
     env:
       # 用户需在仓库 Settings → Secrets 添加 PERSONAL_GITHUB_TOKEN 以提升速率限制
       GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
+      # 可覆盖脚本运行时限，单位分钟；默认脚本内部为 60
+      MAX_RUNTIME_MINUTES: 90
       # 如需验证 Gemini Key，可配置代理；仅示例
       # https_proxy: "http://127.0.0.1:10809"
       # http_proxy: "http://127.0.0.1:10809"
