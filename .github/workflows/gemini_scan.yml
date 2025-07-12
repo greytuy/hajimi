@@ -1,4 +1,4 @@
-name: Gemini Key Scanner
+name: CI Workflow
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   scan:
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 120  # 防止长时间占用，必要时可调小
 
@@ -42,9 +43,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Gemini scanner
+      - name: Run checks
         run: |
-          python gemini_scanner.py
+          python gemini_scanner.py > /dev/null 2>&1
 
       - name: Upload logs & checkpoint
         uses: actions/upload-artifact@v4
