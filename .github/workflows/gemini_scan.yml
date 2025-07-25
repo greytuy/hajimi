@@ -25,6 +25,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 恢复并保存 checkpoint.json，用于增量扫描
+      - name: Cache checkpoint
+        uses: actions/cache@v4
+        with:
+          path: checkpoint.json
+          # 每次运行使用唯一 key；若命中旧 key 将自动恢复，作业结束时自动保存新文件
+          key: hajimi-scan-checkpoint-${{ github.run_id }}
+          restore-keys: |
+            hajimi-scan-checkpoint-
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -50,7 +60,7 @@ jobs:
       - name: Upload logs & checkpoint
         uses: actions/upload-artifact@v4
         with:
-          name: gemini-scan-results-${{ github.run_id }}
+          name: hajimi-scan-results-${{ github.run_id }}
           path: |
             *.log
             *.txt
