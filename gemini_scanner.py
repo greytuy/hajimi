@@ -29,11 +29,62 @@ DATE_RANGE_YEARS = 2
 # 计算时间截止点（UTC）
 _date_cutoff = (datetime.utcnow() - timedelta(days=365 * DATE_RANGE_YEARS)).strftime('%Y-%m-%d')
 
-# Key 搜索词列表，可自行增删
-SEARCH_QUERIES = [
-    '"AIzaSy" in:file',              # 直接搜索以 AIzaSy 开头的内容
-    'GEMINI_API_KEY in:file',         # 搜索常见 env 变量名
+# Key 搜索词列表 - 分层策略：核心查询 + 扩展查询
+# 基于实战经验："正则+语言+排除词是最精准的"，"py和jupyter是重灾区，js和ts是重灾区"
+
+# 🎯 核心查询 (高价值，必须执行)
+CORE_SEARCH_QUERIES = [
+    '"AIzaSy" language:python',                  # Python 重灾区
+    '"AIzaSy" extension:ipynb',                  # Jupyter Notebook 重灾区  
+    '"AIzaSy" language:javascript',              # JavaScript 重灾区
+    '"AIzaSy" language:typescript',              # TypeScript 重灾区
+    '"AIzaSy" -map -maps -youtube -example -demo -tutorial',  # 通用搜索+排除词
+    'GEMINI_API_KEY in:file',                    # 最常见的环境变量名
+    'filename:.env "AIzaSy" -example',           # .env 文件 (配置重灾区)
 ]
+
+# 🔍 扩展查询 (可通过环境变量 ENABLE_EXTENDED_SEARCH=true 启用)
+EXTENDED_SEARCH_QUERIES = [
+    # 更多环境变量命名模式
+    'GOOGLE_API_KEY in:file -map -maps',         # Google API 通用变量名
+    'google_api_key in:file -map -maps',         # 小写版本
+    'gemini_api_key in:file',                    # 小写gemini变量
+    
+    # SDK使用模式 (针对实际代码)
+    'genai.configure language:python',           # Python GenAI SDK配置
+    'google.generativeai language:python',       # Python完整导入
+    
+    # 特定配置文件
+    'filename:.yaml "AIzaSy" -example',          # YAML配置文件
+    'filename:.json "AIzaSy" -example -package', # JSON配置，排除package.json
+    
+    # 语言特定环境变量访问
+    'os.environ "AIzaSy" language:python',       # Python环境变量
+    'process.env "AIzaSy" language:javascript',  # Node.js环境变量
+    'process.env "AIzaSy" language:typescript',  # TypeScript环境变量
+    
+    # 代码赋值模式
+    '"api_key=" "AIzaSy" -example -demo',        # 直接赋值
+    '"apiKey:" "AIzaSy" language:javascript',    # JS/TS对象属性
+]
+
+# 动态组合搜索查询
+def get_search_queries():
+    """根据环境变量决定使用核心查询还是扩展查询"""
+    queries = CORE_SEARCH_QUERIES.copy()
+    
+    # 检查是否启用扩展搜索
+    enable_extended = os.environ.get("ENABLE_EXTENDED_SEARCH", "").lower() in ("true", "1", "yes")
+    if enable_extended:
+        queries.extend(EXTENDED_SEARCH_QUERIES)
+        print(f"扩展搜索已启用，总查询数: {len(queries)}")
+    else:
+        print(f"使用核心搜索查询，查询数: {len(queries)} (设置 ENABLE_EXTENDED_SEARCH=true 启用扩展搜索)")
+    
+    return queries
+
+# 为了向后兼容，保留原变量名
+SEARCH_QUERIES = get_search_queries()
 
 # Your GitHub Personal Access Token should be set as an environment variable.
 # Using a token increases the rate limit for API requests.
@@ -255,7 +306,9 @@ def main():
     # 打印纯 key 文件名
     print(f"Keys-only file: {KEYS_ONLY_FILENAME}")
 
-    print(f"Search queries: {', '.join(SEARCH_QUERIES)}")
+    # 动态获取搜索查询列表
+    current_queries = get_search_queries()
+    print(f"Search queries: {', '.join(current_queries)}")
     if MAX_RUNTIME_MINUTES > 0:
         print(f"Script will run for a maximum of {MAX_RUNTIME_MINUTES} minutes.")
 
@@ -268,7 +321,7 @@ def main():
 
     # 统计不同查询得到的 item
     aggregated_items = []
-    for q in SEARCH_QUERIES:
+    for q in current_queries:
         res = search_github_for_keys(q, _next_token())
         if res and "items" in res:
             aggregated_items.extend(res["items"])
